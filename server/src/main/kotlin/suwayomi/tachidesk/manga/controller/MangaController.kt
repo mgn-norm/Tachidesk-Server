@@ -8,25 +8,43 @@ package suwayomi.tachidesk.manga.controller
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 import io.javalin.http.Context
+import io.javalin.http.HttpCode
 import suwayomi.tachidesk.manga.impl.CategoryManga
 import suwayomi.tachidesk.manga.impl.Chapter
 import suwayomi.tachidesk.manga.impl.Library
 import suwayomi.tachidesk.manga.impl.Manga
 import suwayomi.tachidesk.manga.impl.Page
+import suwayomi.tachidesk.manga.impl.chapter.getChapterDownloadReady
+import suwayomi.tachidesk.manga.model.dataclass.MangaDataClass
 import suwayomi.tachidesk.server.JavalinSetup.future
+import suwayomi.tachidesk.server.util.handler
+import suwayomi.tachidesk.server.util.pathParam
+import suwayomi.tachidesk.server.util.queryParam
+import suwayomi.tachidesk.server.util.withOperation
 
 object MangaController {
     /** get manga info */
-    fun retrieve(ctx: Context) {
-        val mangaId = ctx.pathParam("mangaId").toInt()
-        val onlineFetch = ctx.queryParam("onlineFetch")?.toBoolean() ?: false
-
-        ctx.future(
-            future {
-                Manga.getManga(mangaId, onlineFetch)
+    val retrieve = handler(
+        pathParam<Int>("mangaId"),
+        queryParam("onlineFetch", false),
+        documentWith = {
+            withOperation {
+                summary("Get a manga")
+                description("Get a manga from the database using a specific id")
             }
-        )
-    }
+        },
+        behaviorOf = { ctx, mangaId, onlineFetch ->
+            ctx.future(
+                future {
+                    Manga.getManga(mangaId, onlineFetch)
+                }
+            )
+        },
+        withResults = {
+            json<MangaDataClass>(HttpCode.OK)
+            httpCode(HttpCode.NOT_FOUND)
+        }
+    )
 
     /** manga thumbnail */
     fun thumbnail(ctx: Context) {
@@ -109,7 +127,7 @@ object MangaController {
     fun chapterRetrieve(ctx: Context) {
         val chapterIndex = ctx.pathParam("chapterIndex").toInt()
         val mangaId = ctx.pathParam("mangaId").toInt()
-        ctx.future(future { Chapter.getChapter(chapterIndex, mangaId) })
+        ctx.future(future { getChapterDownloadReady(chapterIndex, mangaId) })
     }
 
     /** used to modify a chapter's parameters */

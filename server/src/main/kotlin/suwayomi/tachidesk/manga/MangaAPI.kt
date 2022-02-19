@@ -47,12 +47,12 @@ object MangaAPI {
             get("{sourceId}/filters", SourceController::getFilters)
             post("{sourceId}/filters", SourceController::setFilter)
 
-            get("{sourceId}/search/{searchTerm}/{pageNum}", SourceController::searchSingle)
-//            get("search/{searchTerm}/{pageNum}", SourceController::searchGlobal)
+            get("{sourceId}/search", SourceController::searchSingle)
+//            get("all/search", SourceController::searchGlobal) // TODO
         }
 
         path("manga") {
-            get("{mangaId}", MangaController::retrieve)
+            get("{mangaId}", MangaController.retrieve)
             get("{mangaId}/thumbnail", MangaController::thumbnail)
 
             get("{mangaId}/category", MangaController::categoryList)
@@ -78,7 +78,7 @@ object MangaAPI {
             get("", CategoryController::categoryList)
             post("", CategoryController::categoryCreate)
 
-            // The order here is important {categoryId} needs to be applied last 
+            // The order here is important {categoryId} needs to be applied last
             // or throws a NumberFormatException
             patch("reorder", CategoryController::categoryReorder)
 
@@ -114,6 +114,7 @@ object MangaAPI {
         path("update") {
             get("recentChapters/{pageNum}", UpdateController::recentChapters)
             post("fetch", UpdateController::categoryUpdate)
+            post("reset", UpdateController.reset)
             get("summary", UpdateController::updateSummary)
             ws("", UpdateController::categoryUpdateWS)
         }
