@@ -26,7 +26,7 @@ import org.kodein.di.instance
 import suwayomi.tachidesk.global.GlobalAPI
 import suwayomi.tachidesk.manga.MangaAPI
 import suwayomi.tachidesk.server.util.Browser
-import suwayomi.tachidesk.server.util.setupWebUI
+import suwayomi.tachidesk.server.util.setupWebInterface
 import java.io.IOException
 import java.util.concurrent.CompletableFuture
 import kotlin.concurrent.thread
@@ -45,15 +45,29 @@ object JavalinSetup {
     fun javalinSetup() {
         val app = Javalin.create { config ->
             if (serverConfig.webUIEnabled) {
-                setupWebUI()
+                setupWebInterface()
 
-                logger.info { "Serving webUI static files" }
+                logger.info { "Serving web static files for ${serverConfig.webUIFlavor}" }
                 config.addStaticFiles(applicationDirs.webUIRoot, Location.EXTERNAL)
                 config.addSinglePageRoot("/", applicationDirs.webUIRoot + "/index.html", Location.EXTERNAL)
                 config.registerPlugin(OpenApiPlugin(getOpenApiOptions()))
             }
 
             config.enableCorsForAllOrigins()
+
+            config.accessManager { handler, ctx, _ ->
+                fun credentialsValid(): Boolean {
+                    val (username, password) = ctx.basicAuthCredentials()
+                    return username == serverConfig.basicAuthUsername && password == serverConfig.basicAuthPassword
+                }
+
+                if (serverConfig.basicAuthEnabled && !(ctx.basicAuthCredentialsExist() && credentialsValid())) {
+                    ctx.header("WWW-Authenticate", "Basic")
+                    ctx.status(401).json("Unauthorized")
+                } else {
+                    handler.handle(ctx)
+                }
+            }
         }.events { event ->
             event.serverStarted {
                 if (serverConfig.initialOpenInBrowserEnabled) {
@@ -81,18 +95,6 @@ object JavalinSetup {
             logger.error("IOException while handling the request", e)
             ctx.status(500)
             ctx.result(e.message ?: "Internal Server Error")
-        }
-
-        app.before { ctx ->
-            fun credentialsValid(): Boolean {
-                val (username, password) = ctx.basicAuthCredentials()
-                return username == serverConfig.basicAuthUsername && password == serverConfig.basicAuthPassword
-            }
-
-            if (serverConfig.basicAuthEnabled && !(ctx.basicAuthCredentialsExist() && credentialsValid())) {
-                ctx.header("WWW-Authenticate", "Basic")
-                ctx.status(401).json("Unauthorized")
-            }
         }
 
         app.routes {

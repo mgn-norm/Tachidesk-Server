@@ -7,6 +7,9 @@ package suwayomi.tachidesk.server.util
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import mu.KotlinLogging
 import net.lingala.zip4j.ZipFile
 import org.kodein.di.DI
@@ -14,6 +17,8 @@ import org.kodein.di.conf.global
 import org.kodein.di.instance
 import suwayomi.tachidesk.server.ApplicationDirs
 import suwayomi.tachidesk.server.BuildConfig
+import suwayomi.tachidesk.server.serverConfig
+import uy.kohesive.injekt.injectLazy
 import java.io.File
 import java.io.InputStream
 import java.net.HttpURLConnection
@@ -23,6 +28,7 @@ import java.security.MessageDigest
 
 private val logger = KotlinLogging.logger {}
 private val applicationDirs by DI.global.instance<ApplicationDirs>()
+private val json: Json by injectLazy()
 private val tmpDir = System.getProperty("java.io.tmpdir")
 
 private fun ByteArray.toHex(): String = joinToString(separator = "") { eachByte -> "%02x".format(eachByte) }
@@ -44,6 +50,18 @@ private fun directoryMD5(fileDir: String): String {
     return digest.toHex()
 }
 
+/** Make sure a valid web interface installation is available */
+fun setupWebInterface() {
+    when (serverConfig.webUIFlavor) {
+        "WebUI" -> setupWebUI()
+        "Custom" -> {
+            /* do nothing */
+        }
+        else -> setupWebUI()
+    }
+}
+
+/** Make sure a valid copy of WebUI is available */
 fun setupWebUI() {
     // check if we have webUI installed and is correct version
     val webUIRevisionFile = File(applicationDirs.webUIRoot + "/revision")

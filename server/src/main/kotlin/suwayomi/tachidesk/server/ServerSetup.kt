@@ -11,7 +11,9 @@ import eu.kanade.tachiyomi.App
 import eu.kanade.tachiyomi.source.local.LocalSource
 import io.javalin.plugin.json.JavalinJackson
 import io.javalin.plugin.json.JsonMapper
+import kotlinx.serialization.json.Json
 import mu.KotlinLogging
+import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.kodein.di.DI
 import org.kodein.di.bind
 import org.kodein.di.conf.global
@@ -28,6 +30,7 @@ import xyz.nulldev.ts.config.ApplicationRootDir
 import xyz.nulldev.ts.config.ConfigKodeinModule
 import xyz.nulldev.ts.config.GlobalConfigManager
 import java.io.File
+import java.security.Security
 import java.util.Locale
 
 private val logger = KotlinLogging.logger {}
@@ -37,7 +40,7 @@ class ApplicationDirs(
 ) {
     val extensionsRoot = "$dataRoot/extensions"
     val thumbnailsRoot = "$dataRoot/thumbnails"
-    val mangaDownloadsRoot = "$dataRoot/downloads"
+    val mangaDownloadsRoot = serverConfig.downloadsPath.ifBlank { "$dataRoot/downloads" }
     val localMangaRoot = "$dataRoot/local"
     val webUIRoot = "$dataRoot/webUI"
 }
@@ -51,6 +54,11 @@ val androidCompat by lazy { AndroidCompat() }
 fun applicationSetup() {
     logger.info("Running Tachidesk ${BuildConfig.VERSION} revision ${BuildConfig.REVISION}")
 
+    // register Tachidesk's config which is dubbed "ServerConfig"
+    GlobalConfigManager.registerModule(
+        ServerConfig.register(GlobalConfigManager.config)
+    )
+
     // Application dirs
     val applicationDirs = ApplicationDirs()
 
@@ -59,6 +67,7 @@ fun applicationSetup() {
             bind<ApplicationDirs>() with singleton { applicationDirs }
             bind<IUpdater>() with singleton { Updater() }
             bind<JsonMapper>() with singleton { JavalinJackson() }
+            bind<Json>() with singleton { Json { ignoreUnknownKeys = true } }
         }
     )
 
@@ -67,7 +76,6 @@ fun applicationSetup() {
     // Migrate Directories from old versions
     File("$ApplicationRootDir/manga-thumbnails").renameTo(applicationDirs.thumbnailsRoot)
     File("$ApplicationRootDir/manga-local").renameTo(applicationDirs.localMangaRoot)
-    File("$ApplicationRootDir/manga").renameTo(applicationDirs.mangaDownloadsRoot)
     File("$ApplicationRootDir/anime-thumbnails").delete()
 
     // make dirs we need
@@ -81,11 +89,6 @@ fun applicationSetup() {
     ).forEach {
         File(it).mkdirs()
     }
-
-    // register Tachidesk's config which is dubbed "ServerConfig"
-    GlobalConfigManager.registerModule(
-        ServerConfig.register(GlobalConfigManager.config)
-    )
 
     // Make sure only one instance of the app is running
     handleAppMutex()
@@ -152,4 +155,7 @@ fun applicationSetup() {
         System.getProperties()["socksProxyPort"] = serverConfig.socksProxyPort
         logger.info("Socks Proxy is enabled to ${serverConfig.socksProxyHost}:${serverConfig.socksProxyPort}")
     }
+
+    // AES/CBC/PKCS7Padding Cypher provider for zh.copymanga
+    Security.addProvider(BouncyCastleProvider())
 }

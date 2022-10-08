@@ -44,6 +44,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:$okhttpVersion")
     implementation("io.reactivex:rxjava:1.3.8")
     implementation("org.jsoup:jsoup:1.14.3")
+    implementation("app.cash.quickjs:quickjs-jvm:0.9.2")
 
     // Sort
     implementation("com.github.gpanther:java-nat-sort:natural-comparator-1.1")
@@ -53,10 +54,13 @@ dependencies {
 
     // Disk & File
     implementation("net.lingala.zip4j:zip4j:2.9.1")
-    implementation("com.github.junrar:junrar:7.4.0")
+    implementation("com.github.junrar:junrar:7.5.0")
 
     // CloudflareInterceptor
     implementation("net.sourceforge.htmlunit:htmlunit:2.56.0")
+
+    // AES/CBC/PKCS7Padding Cypher provider for zh.copymanga
+    implementation("org.bouncycastle:bcprov-jdk18on:1.71")
 
     // Source models and interfaces from Tachiyomi 1.x
     // using source class from tachiyomi commit 9493577de27c40ce8b2b6122cc447d025e34c477 to not depend on tachiyomi.sourceapi
@@ -74,6 +78,9 @@ dependencies {
 }
 
 application {
+    applicationDefaultJvmArgs = listOf(
+        "-Djunrar.extractor.thread-keep-alive-seconds=30"
+    )
     mainClass.set(MainClass)
 }
 
