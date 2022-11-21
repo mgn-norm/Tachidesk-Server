@@ -8,6 +8,11 @@ package suwayomi.tachidesk.manga.controller
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 import io.javalin.http.HttpCode
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
+import org.kodein.di.DI
+import org.kodein.di.conf.global
+import org.kodein.di.instance
 import suwayomi.tachidesk.manga.impl.CategoryManga
 import suwayomi.tachidesk.manga.impl.Chapter
 import suwayomi.tachidesk.manga.impl.Library
@@ -23,15 +28,17 @@ import suwayomi.tachidesk.server.util.handler
 import suwayomi.tachidesk.server.util.pathParam
 import suwayomi.tachidesk.server.util.queryParam
 import suwayomi.tachidesk.server.util.withOperation
+import kotlin.time.Duration.Companion.days
 
 object MangaController {
-    /** get manga info */
+    private val json by DI.global.instance<Json>()
+
     val retrieve = handler(
         pathParam<Int>("mangaId"),
         queryParam("onlineFetch", false),
         documentWith = {
             withOperation {
-                summary("Get a manga")
+                summary("Get manga info")
                 description("Get a manga from the database using a specific id.")
             }
         },
@@ -39,6 +46,29 @@ object MangaController {
             ctx.future(
                 future {
                     Manga.getManga(mangaId, onlineFetch)
+                }
+            )
+        },
+        withResults = {
+            json<MangaDataClass>(HttpCode.OK)
+            httpCode(HttpCode.NOT_FOUND)
+        }
+    )
+
+    /** get manga info with all data filled in */
+    val retrieveFull = handler(
+        pathParam<Int>("mangaId"),
+        queryParam("onlineFetch", false),
+        documentWith = {
+            withOperation {
+                summary("Get manga info with all data filled in")
+                description("Get a manga from the database using a specific id.")
+            }
+        },
+        behaviorOf = { ctx, mangaId, onlineFetch ->
+            ctx.future(
+                future {
+                    Manga.getMangaFull(mangaId, onlineFetch)
                 }
             )
         },
@@ -63,14 +93,14 @@ object MangaController {
                 future { Manga.getMangaThumbnail(mangaId, useCache) }
                     .thenApply {
                         ctx.header("content-type", it.second)
-                        val httpCacheSeconds = 60 * 60 * 24
+                        val httpCacheSeconds = 1.days.inWholeSeconds
                         ctx.header("cache-control", "max-age=$httpCacheSeconds")
                         it.first
                     }
             )
         },
         withResults = {
-            mime(HttpCode.OK, "image/*")
+            image(HttpCode.OK)
             httpCode(HttpCode.NOT_FOUND)
         }
     )
@@ -210,6 +240,49 @@ object MangaController {
         }
     )
 
+    /** batch edit chapters of single manga */
+    val chapterBatch = handler(
+        pathParam<Int>("mangaId"),
+        documentWith = {
+            withOperation {
+                summary("Chapters update multiple")
+                description("Update multiple chapters of single manga. For batch marking as read, or bookmarking")
+            }
+            body<Chapter.MangaChapterBatchEditInput>()
+        },
+        behaviorOf = { ctx, mangaId ->
+            val input = json.decodeFromString<Chapter.MangaChapterBatchEditInput>(ctx.body())
+            Chapter.modifyChapters(input, mangaId)
+        },
+        withResults = {
+            httpCode(HttpCode.OK)
+        }
+    )
+
+    /** batch edit chapters from multiple manga */
+    val anyChapterBatch = handler(
+        documentWith = {
+            withOperation {
+                summary("Chapters update multiple")
+                description("Update multiple chapters on any manga. For batch marking as read, or bookmarking")
+            }
+            body<Chapter.ChapterBatchEditInput>()
+        },
+        behaviorOf = { ctx ->
+            val input = json.decodeFromString<Chapter.ChapterBatchEditInput>(ctx.body())
+            Chapter.modifyChapters(
+                Chapter.MangaChapterBatchEditInput(
+                    input.chapterIds,
+                    null,
+                    input.change
+                )
+            )
+        },
+        withResults = {
+            httpCode(HttpCode.OK)
+        }
+    )
+
     /** used to display a chapter, get a chapter in order to show its pages */
     val chapterRetrieve = handler(
         pathParam<Int>("mangaId"),
@@ -314,12 +387,14 @@ object MangaController {
                 future { Page.getPageImage(mangaId, chapterIndex, index, useCache) }
                     .thenApply {
                         ctx.header("content-type", it.second)
+                        val httpCacheSeconds = 1.days.inWholeSeconds
+                        ctx.header("cache-control", "max-age=$httpCacheSeconds")
                         it.first
                     }
             )
         },
         withResults = {
-            mime(HttpCode.OK, "image/*")
+            image(HttpCode.OK)
             httpCode(HttpCode.NOT_FOUND)
         }
     )

@@ -8,6 +8,7 @@ package suwayomi.tachidesk.manga.model.dataclass
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 data class ChapterDataClass(
+    val id: Int,
     val url: String,
     val name: String,
     val uploadDate: Long,
@@ -44,5 +45,5 @@ data class ChapterDataClass(
     val chapterCount: Int? = null,
 
     /** used to store client specific values */
-    val meta: Map<String, String> = emptyMap(),
+    val meta: Map<String, String> = emptyMap()
 )

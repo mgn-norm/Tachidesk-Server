@@ -12,6 +12,7 @@ import io.javalin.apibuilder.ApiBuilder.get
 import io.javalin.apibuilder.ApiBuilder.patch
 import io.javalin.apibuilder.ApiBuilder.path
 import io.javalin.apibuilder.ApiBuilder.post
+import io.javalin.apibuilder.ApiBuilder.put
 import io.javalin.apibuilder.ApiBuilder.ws
 import suwayomi.tachidesk.manga.controller.BackupController
 import suwayomi.tachidesk.manga.controller.CategoryController
@@ -48,11 +49,13 @@ object MangaAPI {
             post("{sourceId}/filters", SourceController.setFilters)
 
             get("{sourceId}/search", SourceController.searchSingle)
+            post("{sourceId}/quick-search", SourceController.quickSearchSingle)
 //            get("all/search", SourceController.searchGlobal) // TODO
         }
 
         path("manga") {
             get("{mangaId}", MangaController.retrieve)
+            get("{mangaId}/full", MangaController.retrieveFull)
             get("{mangaId}/thumbnail", MangaController.thumbnail)
 
             get("{mangaId}/category", MangaController.categoryList)
@@ -65,13 +68,19 @@ object MangaAPI {
             patch("{mangaId}/meta", MangaController.meta)
 
             get("{mangaId}/chapters", MangaController.chapterList)
+            post("{mangaId}/chapter/batch", MangaController.chapterBatch)
             get("{mangaId}/chapter/{chapterIndex}", MangaController.chapterRetrieve)
             patch("{mangaId}/chapter/{chapterIndex}", MangaController.chapterModify)
+            put("{mangaId}/chapter/{chapterIndex}", MangaController.chapterModify)
             delete("{mangaId}/chapter/{chapterIndex}", MangaController.chapterDelete)
 
             patch("{mangaId}/chapter/{chapterIndex}/meta", MangaController.chapterMeta)
 
             get("{mangaId}/chapter/{chapterIndex}/page/{index}", MangaController.pageRetrieve)
+        }
+
+        path("chapter") {
+            post("batch", MangaController.anyChapterBatch)
         }
 
         path("category") {
@@ -85,6 +94,8 @@ object MangaAPI {
             get("{categoryId}", CategoryController.categoryMangas)
             patch("{categoryId}", CategoryController.categoryModify)
             delete("{categoryId}", CategoryController.categoryDelete)
+
+            patch("{categoryId}/meta", CategoryController.meta)
         }
 
         path("backup") {
@@ -103,12 +114,15 @@ object MangaAPI {
 
             get("start", DownloadController.start)
             get("stop", DownloadController.stop)
-            get("clear", DownloadController.stop)
+            get("clear", DownloadController.clear)
         }
 
         path("download") {
             get("{mangaId}/chapter/{chapterIndex}", DownloadController.queueChapter)
             delete("{mangaId}/chapter/{chapterIndex}", DownloadController.unqueueChapter)
+            patch("{mangaId}/chapter/{chapterIndex}/reorder/{to}", DownloadController.reorderChapter)
+            post("batch", DownloadController.queueChapters)
+            delete("batch", DownloadController.unqueueChapters)
         }
 
         path("update") {

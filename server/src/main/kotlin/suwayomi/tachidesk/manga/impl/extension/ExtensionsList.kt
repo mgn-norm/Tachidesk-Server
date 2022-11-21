@@ -9,6 +9,7 @@ package suwayomi.tachidesk.manga.impl.extension
 
 import eu.kanade.tachiyomi.source.local.LocalSource
 import mu.KotlinLogging
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.select
@@ -59,7 +60,7 @@ object ExtensionsList {
                 it[ExtensionTable.isNsfw],
                 it[ExtensionTable.isInstalled],
                 it[ExtensionTable.hasUpdate],
-                it[ExtensionTable.isObsolete],
+                it[ExtensionTable.isObsolete]
             )
         }
     }

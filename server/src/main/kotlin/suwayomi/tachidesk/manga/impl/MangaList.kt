@@ -27,6 +27,9 @@ object MangaList {
     }
 
     suspend fun getMangaList(sourceId: Long, pageNum: Int = 1, popular: Boolean): PagedMangaListDataClass {
+        require(pageNum > 0) {
+            "pageNum = $pageNum is not in valid range"
+        }
         val source = getCatalogueSourceOrStub(sourceId)
         val mangasPage = if (popular) {
             source.fetchPopularManga(pageNum).awaitSingle()
@@ -85,6 +88,8 @@ object MangaList {
                         0,
                         meta = getMangaMetaMap(mangaId),
                         realUrl = mangaEntry[MangaTable.realUrl],
+                        lastFetchedAt = mangaEntry[MangaTable.lastFetchedAt],
+                        chaptersLastFetchedAt = mangaEntry[MangaTable.chaptersLastFetchedAt],
                         freshData = true
                     )
                 } else {
@@ -108,6 +113,8 @@ object MangaList {
                         mangaEntry[MangaTable.inLibraryAt],
                         meta = getMangaMetaMap(mangaId),
                         realUrl = mangaEntry[MangaTable.realUrl],
+                        lastFetchedAt = mangaEntry[MangaTable.lastFetchedAt],
+                        chaptersLastFetchedAt = mangaEntry[MangaTable.chaptersLastFetchedAt],
                         freshData = false
                     )
                 }

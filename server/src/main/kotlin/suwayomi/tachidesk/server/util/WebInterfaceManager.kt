@@ -8,8 +8,6 @@ package suwayomi.tachidesk.server.util
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import mu.KotlinLogging
 import net.lingala.zip4j.ZipFile
 import org.kodein.di.DI
@@ -105,8 +103,9 @@ fun setupWebUI() {
                     while (true) {
                         val count = inp.read(data, 0, 1024)
 
-                        if (count == -1)
+                        if (count == -1) {
                             break
+                        }
 
                         totalCount += count
                         val percentage = (totalCount.toFloat() / contentLength * 100).toInt().toString().padStart(2, '0')

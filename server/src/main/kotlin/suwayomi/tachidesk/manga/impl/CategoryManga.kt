@@ -9,6 +9,7 @@ package suwayomi.tachidesk.manga.impl
 
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.count
 import org.jetbrains.exposed.sql.deleteWhere
@@ -80,19 +81,20 @@ object CategoryManga {
 
         val transform: (ResultRow) -> MangaDataClass = {
             val dataClass = MangaTable.toDataClass(it)
-            dataClass.unreadCount = it[unreadExpression]?.toInt()
-            dataClass.downloadCount = it[downloadExpression]?.toInt()
-            dataClass.chapterCount = it[chapterCountExpression]?.toInt()
+            dataClass.unreadCount = it[unreadExpression]
+            dataClass.downloadCount = it[downloadExpression]
+            dataClass.chapterCount = it[chapterCountExpression]
             dataClass
         }
 
-        if (categoryId == DEFAULT_CATEGORY_ID)
+        if (categoryId == DEFAULT_CATEGORY_ID) {
             return transaction {
                 MangaTable
                     .slice(selectedColumns)
                     .select { (MangaTable.inLibrary eq true) and (MangaTable.defaultCategory eq true) }
                     .map(transform)
             }
+        }
 
         return transaction {
             CategoryMangaTable.innerJoin(MangaTable)

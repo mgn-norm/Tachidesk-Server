@@ -1,4 +1,4 @@
-package suwayomi.tachidesk.manga.impl.backup
+package suwayomi.tachidesk.global.model.table
 
 /*
  * Copyright (C) Contributors to the Suwayomi project
@@ -7,6 +7,12 @@ package suwayomi.tachidesk.manga.impl.backup
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 
-abstract class AbstractBackupValidator {
-    data class ValidationResult(val missingSources: List<String>, val missingTrackers: List<String>)
+import org.jetbrains.exposed.dao.id.IntIdTable
+
+/**
+ * Metadata storage for clients, server/global level.
+ */
+object GlobalMetaTable : IntIdTable() {
+    val key = varchar("key", 256)
+    val value = varchar("value", 4096)
 }

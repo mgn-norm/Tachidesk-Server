@@ -43,12 +43,12 @@ object SettingsController {
             }
         },
         behaviorOf = { ctx ->
-            ctx.json(
+            ctx.future(
                 future { AppUpdate.checkUpdate() }
             )
         },
         withResults = {
-            json<UpdateDataClass>(HttpCode.OK)
+            json<Array<UpdateDataClass>>(HttpCode.OK)
         }
     )
 }

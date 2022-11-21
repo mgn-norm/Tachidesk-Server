@@ -38,6 +38,7 @@ object ChapterTable : IntIdTable() {
 
 fun ChapterTable.toDataClass(chapterEntry: ResultRow) =
     ChapterDataClass(
+        chapterEntry[id].value,
         chapterEntry[url],
         chapterEntry[name],
         chapterEntry[date_upload],
@@ -53,5 +54,5 @@ fun ChapterTable.toDataClass(chapterEntry: ResultRow) =
         chapterEntry[isDownloaded],
         chapterEntry[pageCount],
         transaction { ChapterTable.select { manga eq chapterEntry[manga].value }.count().toInt() },
-        getChapterMetaMap(chapterEntry[id]),
+        getChapterMetaMap(chapterEntry[id])
     )

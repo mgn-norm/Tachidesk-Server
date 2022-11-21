@@ -9,13 +9,21 @@ package suwayomi.tachidesk.manga.controller
 
 import io.javalin.http.HttpCode
 import io.javalin.websocket.WsConfig
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
+import org.kodein.di.DI
+import org.kodein.di.conf.global
+import org.kodein.di.instance
 import suwayomi.tachidesk.manga.impl.download.DownloadManager
+import suwayomi.tachidesk.manga.impl.download.DownloadManager.EnqueueInput
 import suwayomi.tachidesk.server.JavalinSetup.future
 import suwayomi.tachidesk.server.util.handler
 import suwayomi.tachidesk.server.util.pathParam
 import suwayomi.tachidesk.server.util.withOperation
 
 object DownloadController {
+    private val json by DI.global.instance<Json>()
+
     /** Download queue stats */
     fun downloadsWS(ws: WsConfig) {
         ws.onConnect { ctx ->
@@ -38,10 +46,8 @@ object DownloadController {
                 description("Start the downloader")
             }
         },
-        behaviorOf = { ctx ->
+        behaviorOf = {
             DownloadManager.start()
-
-            ctx.status(200)
         },
         withResults = {
             httpCode(HttpCode.OK)
@@ -57,9 +63,9 @@ object DownloadController {
             }
         },
         behaviorOf = { ctx ->
-            DownloadManager.stop()
-
-            ctx.status(200)
+            ctx.future(
+                future { DownloadManager.stop() }
+            )
         },
         withResults = {
             httpCode(HttpCode.OK)
@@ -75,35 +81,78 @@ object DownloadController {
             }
         },
         behaviorOf = { ctx ->
-            DownloadManager.clear()
-
-            ctx.status(200)
+            ctx.future(
+                future { DownloadManager.clear() }
+            )
         },
         withResults = {
             httpCode(HttpCode.OK)
         }
     )
 
-    /** Queue chapter for download */
+    /** Queue single chapter for download */
     val queueChapter = handler(
         pathParam<Int>("chapterIndex"),
         pathParam<Int>("mangaId"),
         documentWith = {
             withOperation {
-                summary("Downloader add chapter")
-                description("Queue chapter for download")
+                summary("Downloader add single chapter")
+                description("Queue single chapter for download")
             }
         },
         behaviorOf = { ctx, chapterIndex, mangaId ->
             ctx.future(
                 future {
-                    DownloadManager.enqueue(chapterIndex, mangaId)
+                    DownloadManager.enqueueWithChapterIndex(mangaId, chapterIndex)
                 }
             )
         },
         withResults = {
             httpCode(HttpCode.OK)
             httpCode(HttpCode.NOT_FOUND)
+        }
+    )
+
+    val queueChapters = handler(
+        documentWith = {
+            withOperation {
+                summary("Downloader add multiple chapters")
+                description("Queue multiple chapters for download")
+            }
+            body<EnqueueInput>()
+        },
+        behaviorOf = { ctx ->
+            val inputs = json.decodeFromString<EnqueueInput>(ctx.body())
+            ctx.future(
+                future {
+                    DownloadManager.enqueue(inputs)
+                }
+            )
+        },
+        withResults = {
+            httpCode(HttpCode.OK)
+        }
+    )
+
+    /** delete multiple chapters from download queue */
+    val unqueueChapters = handler(
+        documentWith = {
+            withOperation {
+                summary("Downloader remove multiple downloads")
+                description("Remove multiple chapters downloads from queue")
+            }
+            body<EnqueueInput>()
+        },
+        behaviorOf = { ctx ->
+            val input = json.decodeFromString<EnqueueInput>(ctx.body())
+            ctx.future(
+                future {
+                    DownloadManager.unqueue(input)
+                }
+            )
+        },
+        withResults = {
+            httpCode(HttpCode.OK)
         }
     )
 
@@ -121,6 +170,25 @@ object DownloadController {
             DownloadManager.unqueue(chapterIndex, mangaId)
 
             ctx.status(200)
+        },
+        withResults = {
+            httpCode(HttpCode.OK)
+        }
+    )
+
+    /** clear download queue */
+    val reorderChapter = handler(
+        pathParam<Int>("chapterIndex"),
+        pathParam<Int>("mangaId"),
+        pathParam<Int>("to"),
+        documentWith = {
+            withOperation {
+                summary("Downloader reorder chapter")
+                description("Reorder chapter in download queue")
+            }
+        },
+        behaviorOf = { _, chapterIndex, mangaId, to ->
+            DownloadManager.reorder(chapterIndex, mangaId, to)
         },
         withResults = {
             httpCode(HttpCode.OK)

@@ -16,6 +16,7 @@ import org.kodein.di.instance
 import suwayomi.tachidesk.manga.impl.MangaList
 import suwayomi.tachidesk.manga.impl.Search
 import suwayomi.tachidesk.manga.impl.Search.FilterChange
+import suwayomi.tachidesk.manga.impl.Search.FilterData
 import suwayomi.tachidesk.manga.impl.Source
 import suwayomi.tachidesk.manga.impl.Source.SourcePreferenceChange
 import suwayomi.tachidesk.manga.model.dataclass.PagedMangaListDataClass
@@ -130,6 +131,7 @@ object SourceController {
                 summary("Source preference set")
                 description("Set one preference of source with id `sourceId`")
             }
+            body<SourcePreferenceChange>()
         },
         behaviorOf = { ctx, sourceId ->
             val preferenceChange = ctx.bodyAsClass(SourcePreferenceChange::class.java)
@@ -168,6 +170,8 @@ object SourceController {
                 summary("Source filters set")
                 description("Change filters of source with id `sourceId`")
             }
+            body<FilterChange>()
+            body<Array<FilterChange>>()
         },
         behaviorOf = { ctx, sourceId ->
             val filterChange = try {
@@ -196,6 +200,26 @@ object SourceController {
         },
         behaviorOf = { ctx, sourceId, searchTerm, pageNum ->
             ctx.future(future { Search.sourceSearch(sourceId, searchTerm, pageNum) })
+        },
+        withResults = {
+            json<PagedMangaListDataClass>(HttpCode.OK)
+        }
+    )
+
+    /** quick search single source filter */
+    val quickSearchSingle = handler(
+        pathParam<Long>("sourceId"),
+        queryParam("pageNum", 1),
+        documentWith = {
+            withOperation {
+                summary("Source manga quick search")
+                description("Returns list of manga from source matching posted searchTerm and filter")
+            }
+            body<FilterData>()
+        },
+        behaviorOf = { ctx, sourceId, pageNum ->
+            val filter = json.decodeFromString<FilterData>(ctx.body())
+            ctx.future(future { Search.sourceFilter(sourceId, pageNum, filter) })
         },
         withResults = {
             json<PagedMangaListDataClass>(HttpCode.OK)
